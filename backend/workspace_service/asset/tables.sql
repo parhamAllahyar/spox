@@ -1,0 +1,56 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+
+CREATE TABLE IF NOT EXISTS workspaces (
+   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(50) NOT NULL,
+    creator_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  
+);
+
+
+
+CREATE TABLE IF NOT EXISTS roles (
+    id UUID PRIMARY KEY NOT NULL,
+    title VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+);
+
+
+
+
+CREATE TABLE IF NOT EXISTS user_roles (
+    id UUID PRIMARY KEY NOT NULL,
+    user_id UUID NOT NULL,
+    workspace_id UUID NOT NULL,
+    role_id UUID NOT NULL,
+    FOREIGN KEY (workspace_id) REFERENCES Workspaces(id),
+    FOREIGN KEY (role_id) REFERENCES Roles(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

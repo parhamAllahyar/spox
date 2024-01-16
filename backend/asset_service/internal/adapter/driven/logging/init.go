@@ -1,0 +1,35 @@
+package logging
+
+// import (
+// 	"asset/config"
+// 	configuration "asset/config"
+// 	loggingDriven "asset/internal/core/port/driven/logging"
+
+// 	log "github.com/sirupsen/logrus"
+
+// )
+
+// type logging struct {
+// 	config configuration.Logging
+// }
+
+// func NewLogger(config configuration.Logging) loggingDriven.Logging {
+
+// 	return logging{
+// 		config: config,
+// 	}
+
+// }
+
+// func Init(config config.Logging) {
+
+// 	if config.Environment.ENV == "production" {
+// 		log.SetFormatter(&log.JSONFormatter{})
+// 	} else {
+// 		// The TextFormatter is default, you don't actually have to do this.
+// 		log.SetFormatter(&log.TextFormatter{})
+// 	}
+// }
+
+//Env
+//Format

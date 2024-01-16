@@ -1,0 +1,312 @@
+version: "3.9"
+
+services:
+  # -------------------- ASSET -------------------
+  # ASSET APP
+  asset-app:
+    container_name: asset-app
+    hostname: ${ASSET_APP_HOST}
+    build:
+      context: ${ASSET_APP_PATH}
+      dockerfile: dockerfile.dev
+    image: asset:1.0
+    volumes:
+      - ../../backend/asset_service:/app
+    environment:
+      - POSTGRES_HOST=${ASSET_DB_HOST}
+      - POSTGRES_USER=${ASSET_DB_USER}
+      - POSTGRES_PASSWORD=${ASSET_DB_PASSWORD}
+      - POSTGRES_DB=${ASSET_DB_NAME}
+      - POSTGRES_PORT=${ASSET_DB_PORT}
+      - USER_APP_PORT=${USER_APP_PORT}
+      - USER_APP_HOST=${USER_APP_HOST}
+    restart: on-failure
+    depends_on:
+      - asset-postgres-db
+    networks:
+      - backend
+      - asset
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.asset-app.rule=PathPrefix(`/asset-service`)"
+      - "traefik.http.services.asset-app.loadbalancer.server.port=82"
+
+  # ASSET DB
+  asset-postgres-db:
+    container_name: asset-postgres-db
+    image: postgres:14.1-alpine
+    restart: always
+    hostname: ${ASSET_DB_HOST}
+    environment:
+      - POSTGRES_USER=${ASSET_DB_USER}
+      - POSTGRES_PASSWORD=${ASSET_DB_PASSWORD}
+      - POSTGRES_DB=${ASSET_DB_NAME}
+    volumes:
+      - asset-db:/var/lib/postgresql/data
+    networks:
+      - asset
+      - db
+
+  # -------------------- Board -------------------
+  # BOARD APP
+  board-app:
+    container_name: board-app
+    build:
+      context: ${BOARD_APP_PATH}
+      dockerfile: dockerfile.dev
+    image: board:1.0   
+    hostname: ${BOARD_APP_HOST}
+    volumes:
+      - ../../backend/board_service:/app
+    environment:
+      - POSTGRES_HOST=${BOARD_DB_HOST}
+      - POSTGRES_USER=${BOARD_DB_USER}
+      - POSTGRES_PASSWORD=${BOARD_DB_PASSWORD}
+      - POSTGRES_DB=${BOARD_DB_NAME}
+      - POSTGRES_PORT=${BOARD_DB_PORT}
+      - USER_APP_PORT=${USER_APP_PORT}
+      - USER_APP_HOST=${USER_APP_HOST}
+    restart: on-failure
+    depends_on:
+      - board-postgres-db
+    networks:
+      - backend
+      - board
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.board-app.rule=PathPrefix(`/board-service`)"
+      - "traefik.http.services.board-app.loadbalancer.server.port=82"
+
+  # BOARD DB
+  board-postgres-db:
+    container_name: board-postgres-db
+    image: postgres:14.1-alpine
+    hostname: ${BOARD_DB_HOST}
+    restart: always
+    environment:
+      - POSTGRES_USER=${BOARD_DB_USER}
+      - POSTGRES_PASSWORD=${BOARD_DB_PASSWORD}
+      - POSTGRES_DB=${BOARD_DB_NAME}
+    volumes:
+      - board-db:/var/lib/postgresql/data
+    networks:
+      - board
+      - db
+
+  # -------------------- CHANNEL -----------------
+  # -------------------- NOTIFICATION ------------
+  # -------------------- USER --------------------
+  # USER APP
+  userapp:
+    container_name: userapp
+    hostname: ${USER_APP_HOST}
+    build:
+      context: ${USER_APP_PATH}
+      dockerfile: dockerfile.dev
+    image: user:1.0
+    volumes:
+      - ../../backend/user_service:/app
+    environment:
+      - POSTGRES_HOST=user-postgres-db
+      - POSTGRES_USER=${USER_DB_USER}
+      - POSTGRES_PASSWORD=${USER_DB_PASSWORD}
+      - POSTGRES_DB=${USER_DB_NAME}
+      - POSTGRES_PORT=${USER_DB_PORT}
+      - USER_HTTP_PORT=${USER_APP_PORT}
+      - ENV=${ENV}
+      - USER_TOKEN=${USER_TOKEN}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+
+    restart: on-failure
+    depends_on:
+      - user-postgres-db
+    networks:
+      - backend
+      - user
+      - web
+
+  # USER DB
+  user-postgres-db:
+    container_name: user-postgres-db
+    hostname: ${USER_DB_HOST}
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${USER_DB_USER}
+      - POSTGRES_PASSWORD=${USER_DB_PASSWORD}
+      - POSTGRES_DB=${USER_DB_NAME}
+    volumes:
+      - user-db:/var/lib/postgresql/data
+    networks:
+      - user
+      - db
+
+  # -------------------- WEB BFF ---------------------
+  # BACKEND FOR FRONTEND
+  web-bff-app:
+    container_name: web-bff-app
+    hostname: ${WEB_BFF_APP_HOST}
+    build:
+      context: ${WEB_BFF_APP_PATH}
+      dockerfile: dockerfile.dev
+    ports:
+      - ${WEB_BFF_APP_PORT}:${WEB_BFF_APP_PORT}
+    image: webbff:1.0
+    volumes:
+      - ../../backend/web_service:/app
+    environment:
+      - PORT=${WEB_BFF_APP_PORT}
+      # - ASSET_APP_HOST=${ASSET_APP_HOST}
+      # - ASSET_APP_PORT=${ASSET_APP_PORT}
+      # - BOARD_APP_HOST=${BOARD_APP_URL}
+      # - BOARD_APP_PORT=${BOARD_APP_PORT}
+      - WORKSPACE_APP_HOST=${WORKSPACE_APP_HOST}
+      - WORKSPACE_APP_PORT=${WORKSPACE_APP_PORT}
+      - USER_APP_HOST=userapp
+      - USER_APP_PORT=${USER_APP_PORT}
+    restart: on-failure
+    depends_on:
+      # - asset-app
+      - workspaceapp
+      - userapp
+      # - board-app
+
+    networks:
+      - backend
+      - frontend
+      - web
+
+  # -------------------- Workspace ---------------
+  # WORKSPACE APP
+  workspaceapp:
+    container_name: workspaceapp
+    hostname: ${WORKSPACE_APP_HOST}
+    build:
+      context: ${WORKSPACE_APP_PATH}
+      dockerfile: dockerfile.dev
+    image: workspace:1.0
+    volumes:
+      - ../../backend/workspace_service:/app
+    environment:
+      - POSTGRES_HOST=workspace-postgres-db
+      - POSTGRES_USER=${WORKSPACE_DB_USER}
+      - POSTGRES_PASSWORD=${WORKSPACE_DB_PASSWORD}
+      - POSTGRES_DB=${WORKSPACE_DB_NAME}
+      - POSTGRES_PORT=${WORKSPACE_DB_PORT}
+      - USER_APP_PORT=${USER_APP_PORT}
+      - USER_APP_HOST=${USER_APP_HOST}
+    restart: on-failure
+    depends_on:
+      - workspace-postgres-db
+    networks:
+      - backend
+      - workspace
+
+
+  # WORKSPACE DB
+  workspace-postgres-db:
+    container_name: workspace-postgres-db
+    hostname: ${WORKSPACE_DB_HOST}
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${WORKSPACE_DB_USER}
+      - POSTGRES_PASSWORD=${WORKSPACE_DB_PASSWORD}
+      - POSTGRES_DB=${WORKSPACE_DB_NAME}
+    volumes:
+      - workspace-db:/var/lib/postgresql/data
+    networks:
+      - workspace
+      - db
+
+  # -------------------- PG ADMIN ----------------
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: pwdpwd
+      PGADMIN_LISTEN_PORT: 5050
+    depends_on:
+      # - asset-postgres-db
+      # - board-postgres-db
+      - user-postgres-db
+      # - workspace-postgres-db
+    ports:
+      - 5050:5050
+    volumes:
+      - pgadmin-data:/root/.pgadmin
+    networks:
+      - db
+
+  # -------------------- ADMIN PANEL -------------
+  # ADMIN PANEL
+  admin-panel:
+    container_name: admin-panel-app
+    build:
+      context: ${ADMIN_PANEL_APP_PATH}
+      dockerfile: dockerfile.dev
+    image: admin-panel:1.0
+    environment:
+      - WEB_URL=${WEB_BFF_APP_HOST}
+      - WEB_PORT=${WEB_BFF_APP_PORT}
+    depends_on:
+      - web-bff-app
+    ports:
+      - ${ADMIN_PANEL_APP_PORT}:${ADMIN_PANEL_APP_PORT}
+    volumes:
+      - /app/node_modules
+      - ../../frontend/spox-admin:/app:/app
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-panel.rule=PathPrefix(`/admin-service`)"
+      - "traefik.http.services.admin-panel.loadbalancer.server.port=3000"
+
+  # -------------------- CLIENT SIDE -------------
+  # USER SIDE FRONTEND
+  client:
+    container_name: client-app
+    build:
+      context: ${CLIENT_SIDE_APP_PATH}
+      dockerfile: dockerfile.dev
+    image: client:1.0
+    environment:
+      - WEB_URL=${WEB_BFF_APP_HOST}
+      - WEB_PORT=${WEB_BFF_APP_PORT}
+    depends_on:
+      - web-bff-app
+    ports:
+      - ${CLIENT_SIDE_APP_PORT}:${CLIENT_SIDE_APP_PORT}
+    volumes:
+      - /app/node_modules
+      - ../../frontend/spox:/app
+    networks:
+      - web
+
+networks:
+  backend:
+    driver: bridge
+  user:
+    driver: bridge
+  asset:
+    driver: bridge
+  board:
+    driver: bridge
+  workspace:
+    driver: bridge
+  frontend:
+    driver: bridge
+  db:
+    driver: bridge
+  web:
+    driver: bridge
+
+volumes:
+  user-db:
+  board-db:
+  workspace-db:
+  message-db:
+  asset-db:
+  channel-db:
+  pgadmin-data:
